@@ -1,0 +1,2 @@
+class RadioConfigurationError(Exception):
+    pass
