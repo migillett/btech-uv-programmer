@@ -1,6 +1,7 @@
 from csv import DictReader, DictWriter
 from time import time
 import logging
+from typing import Optional
 
 from btech_uv_programmer.models import RadioChannelConfig, RadioConfigurationError, Toggle
 
@@ -30,12 +31,12 @@ class BtechUvProProgrammer:
         ]
 
     ### COMMON DEFAULTS ###
-    def load_natnl_aprs(self, channel_index: int) -> None:
+    def load_natnl_aprs(self, channel_index: Optional[int] = None) -> None:
         '''
         Docstring for load_aprs_default
         
-        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max.
-        :type channel_index: int
+        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max. If undefined, add to next available channel.
+        :type channel_index: int | None
         '''
         channel = RadioChannelConfig(
             title='APRS',
@@ -43,35 +44,44 @@ class BtechUvProProgrammer:
             tx_freq=144390000
         )
         channel.mute = Toggle.ENABLED
-        self.set_station(channel_index, channel)
+        if not channel_index:
+            self.append_station(channel)
+        else:
+            self.set_station(channel_index, channel)
 
-    def load_natnl_2m_simplex(self, channel_index: int) -> None:
+    def load_natnl_2m_simplex(self, channel_index: Optional[int] = None) -> None:
         '''
         Load the 2 meter simplex national calling frequency into the channels.
         
-        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max.
-        :type channel_index: int
+        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max.If undefined, add to next available channel.
+        :type channel_index: int | None
         '''
         channel = RadioChannelConfig(
             title='146.520',
             rx_freq=146520000,
             tx_freq=146520000
         )
-        self.set_station(channel_index, channel)
+        if not channel_index:
+            self.append_station(channel)
+        else:
+            self.set_station(channel_index, channel)
 
-    def load_natnl_70cm_simplex(self, channel_index: int) -> None:
+    def load_natnl_70cm_simplex(self, channel_index: Optional[int] = None) -> None:
         '''
         Load the 70 centimeter simplex national calling frequency into the channels.
         
-        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max.
-        :type channel_index: int
+        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max. If undefined, add to next available channel.
+        :type channel_index: int | None
         '''
         channel = RadioChannelConfig(
             title='446.000',
             rx_freq=466000000,
             tx_freq=466000000
         )
-        self.set_station(channel_index, channel)
+        if not channel_index:
+            self.append_station(channel)
+        else:
+            self.set_station(channel_index, channel)
 
     ### SEARCHING ###
     def search_by_title(self, title: str) -> tuple[int, RadioChannelConfig]:
