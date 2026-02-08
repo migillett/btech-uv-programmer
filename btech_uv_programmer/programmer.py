@@ -5,6 +5,8 @@ from typing import Optional
 
 from btech_uv_programmer.models import RadioChannelConfig, RadioConfigurationError, Toggle
 
+from tabulate import tabulate
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,15 @@ class BtechUvProProgrammer:
         :rtype: int
         '''
         return int(mhz * 10e6)
+    
+    def as_table(self) -> None:
+        data = [
+            x.model_dump(mode='json')
+            for x in self.stations.values()
+            if x is not None
+        ]
+        # Print the data as a table, using dictionary keys as headers
+        print(tabulate(data, headers="keys", tablefmt="grid"))
 
     ### COMMON DEFAULTS ###
     def load_natnl_aprs(self, channel_index: Optional[int] = None) -> None:
