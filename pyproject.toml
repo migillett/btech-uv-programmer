@@ -1,6 +1,6 @@
 [project]
 name = "btech-uv-programmer"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python3 class to load, edit, and export CSV files for the BTECH UV-PRO handheld radio."
 readme = "README.md"
 requires-python = ">=3.13"

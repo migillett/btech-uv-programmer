@@ -13,8 +13,10 @@ class BtechUvProProgrammer:
     def __init__(self, max_stations: int = 30) -> None:
         self.max_stations = max_stations
         self.stations: dict[int, RadioChannelConfig | None] = {}
+        # TODO: add support for 6 banks of 30 stations each
         self.clear_config()
 
+    ### UTILITIES ###
     def __check_stations__(self) -> None:
         if len(self.stations) > self.max_stations:
             raise RadioConfigurationError(f'Number of programmed stations {len(self.stations)} exceeds the maximum ({self.max_stations}).')
@@ -29,6 +31,17 @@ class BtechUvProProgrammer:
             field.alias or name
             for name, field in RadioChannelConfig.model_fields.items()
         ]
+    
+    def mhz_to_hz(self, mhz: float) -> int:
+        '''
+        Simple utility that converts mhz (float) to hertz (integer)
+        
+        :param mhz: Frequency in megahertz
+        :type mhz: float
+        :return: Frequency in hertz
+        :rtype: int
+        '''
+        return int(mhz * 10e6)
 
     ### COMMON DEFAULTS ###
     def load_natnl_aprs(self, channel_index: Optional[int] = None) -> None:
@@ -40,8 +53,8 @@ class BtechUvProProgrammer:
         '''
         channel = RadioChannelConfig(
             title='APRS',
-            rx_freq=144390000,
-            tx_freq=144390000
+            rx_freq=self.mhz_to_hz(144.39),
+            tx_freq=self.mhz_to_hz(144.39)
         )
         channel.mute = Toggle.ENABLED
         if not channel_index:
@@ -53,13 +66,13 @@ class BtechUvProProgrammer:
         '''
         Load the 2 meter simplex national calling frequency into the channels.
         
-        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max.If undefined, add to next available channel.
+        :param channel_index: Channel index for the station. Indexes start at 0 and go to station max. If undefined, add to next available channel.
         :type channel_index: int | None
         '''
         channel = RadioChannelConfig(
             title='146.520',
-            rx_freq=146520000,
-            tx_freq=146520000
+            rx_freq=self.mhz_to_hz(146.52),
+            tx_freq=self.mhz_to_hz(146.52)
         )
         if not channel_index:
             self.append_station(channel)
@@ -75,8 +88,8 @@ class BtechUvProProgrammer:
         '''
         channel = RadioChannelConfig(
             title='446.000',
-            rx_freq=466000000,
-            tx_freq=466000000
+            rx_freq=self.mhz_to_hz(446.0),
+            tx_freq=self.mhz_to_hz(446.0)
         )
         if not channel_index:
             self.append_station(channel)
@@ -109,6 +122,7 @@ class BtechUvProProgrammer:
         Clear ALL station configurations.
         '''
         self.stations = {i: None for i in range(self.max_stations)}
+        logging.info('Initialized station configuration.')
 
     def delete_station(self, channel_index: int) -> None:
         '''
@@ -118,7 +132,11 @@ class BtechUvProProgrammer:
         :type channel_index: int
         '''
         self.__check_station_index__(channel_index)
-        self.stations[channel_index] = None
+        if not self.stations[channel_index]:
+            logging.warning(f'No station configuration at channel index {channel_index} to delete.')
+        else:
+            self.stations[channel_index] = None
+            logging.info(f'Deleted station at index {channel_index}')
 
     def append_station(self, channel_config: RadioChannelConfig) -> None:
         '''
@@ -144,8 +162,7 @@ class BtechUvProProgrammer:
         def sanitize_input(row_dict: dict) -> dict:
             response = {}
             for k, v in row_dict.items():
-                v = None if v == "" else v
-                response[k] = v
+                response[k] = None if v == "" else v
             return response
         
         self.clear_config()
@@ -159,7 +176,6 @@ class BtechUvProProgrammer:
         
         self.__check_stations__()
         logger.info(f'Loaded {len(self.stations)} channel presets from CSV: {csv_path}')
-
 
     def dump_csv_config(self, export_path: str | None = None) -> None:
         '''
