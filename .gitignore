@@ -182,3 +182,4 @@ cython_debug/
 
 *.csv
 playground.py
+*.json

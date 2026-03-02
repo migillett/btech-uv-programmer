@@ -5,6 +5,7 @@ description = "A Python3 class to load, edit, and export CSV files for the BTECH
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "bleak>=2.1.1",
     "pydantic>=2.12.5",
     "tabulate>=0.9.0",
 ]
