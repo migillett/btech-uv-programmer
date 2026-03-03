@@ -17,6 +17,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+KISS_READ_UUID  = "00000003-ba2a-46c9-ae49-01b0961f68bb"
+KISS_WRITE_UUID = "00000002-ba2a-46c9-ae49-01b0961f68bb"
+
+
 class DeviceNotFoundError(Exception):
     pass
 
@@ -65,13 +69,9 @@ def load_radio_config(json_path: str = './config.json') -> RadioCharacteristics 
     return None
 
 
-async def discover_services(
-        client: BleakClient,
-        radio_config: RadioCharacteristics
-    ) -> None:
-    logger.info('Attempting service discovery for device...')
+async def print_services(client: BleakClient) -> None:
     for service in client.services:
-        logger.info("[Service] %s", service)
+        logger.info(f'[Service] {service.description}')
         for char in service.characteristics:
             if "read" in char.properties:
                 try:
@@ -91,7 +91,6 @@ async def discover_services(
                 ",".join(char.properties),
                 extra,
             )
-
             for descriptor in char.descriptors:
                 try:
                     value = await client.read_gatt_descriptor(descriptor)
@@ -100,15 +99,19 @@ async def discover_services(
                     logger.error("    [Descriptor] %s, Error: %s", descriptor, e)
 
 
-        # logger.info(f'{service.description}: {service.characteristics}')
-        # if service.description == 'SDP':
-        #     logger.info(f'Found SDP Service: {service}')
-        #     radio_config.SdpUuid = service.uuid
-        #     for char in service.characteristics:
-        #         if 'read' in char.properties:
-        #             radio_config.SdpRead = char.uuid
-        #         elif 'write' in char.properties:
-        #             radio_config.SdpWrite = char.uuid
+async def discover_services(
+        client: BleakClient,
+        radio_config: RadioCharacteristics
+    ) -> None:
+    logger.info('Attempting service discovery for device...')
+    for service in client.services:
+        if service.description == 'SDP':
+            radio_config.SdpUuid = service.uuid
+            for char in service.characteristics:
+                if 'read' in char.properties:
+                    radio_config.SdpRead = char.uuid
+                elif 'write' in char.properties:
+                    radio_config.SdpWrite = char.uuid
     
     logger.info(radio_config.model_dump(mode='json'))
 
@@ -130,18 +133,22 @@ async def main(reload: bool = False) -> None:
     radio_details = await find_radio(reload)
     async with BleakClient(radio_details.MacAddress, timeout=15) as client:
         logger.info(f'Connected to radio {radio_details.MacAddress}')
-        try:
-            for service in client.services:
-                print(service)
 
+        async def notification_handler(sender, data):
+            logger.info(f"RX: {data.hex()}")
+
+        try:
+            await print_services(client)
             if not radio_details.has_sdp_config():
                 await discover_services(client, radio_details)
+
+            await client.start_notify(KISS_READ_UUID, notification_handler)
 
             if not radio_details.has_sdp_config():
                 raise MissingRadioConfigError()
             
             logger.debug("Reading characteristics...")
-            details = await client.read_gatt_char(radio_details.SdpRead)
+            details = await client.read_gatt_char(radio_details.SdpWrite)
             logger.debug(details)
         except Exception as e:
             logger.exception(e)
