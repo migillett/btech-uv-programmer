@@ -34,6 +34,15 @@ class BtechUvProProgrammer:
             for name, field in RadioChannelConfig.model_fields.items()
         ]
     
+    def _check_for_empty_stations(self) -> bool:
+        '''
+        Iterates through Stations and checks if there are ANY stations that are not programmed
+        '''
+        for station in self.stations.values():
+            if station is not None:
+                return False
+        return True
+    
     def mhz_to_hz(self, mhz: float) -> int:
         '''
         Simple utility that converts mhz (float) to hertz (integer)
@@ -198,8 +207,10 @@ class BtechUvProProgrammer:
         if not export_path:
             export_path = f'{int(time())}_export.csv'
 
-        if len(self.stations) == 0:
-            raise RadioConfigurationError(f'No stations loaded. Unable to export configuration to: {export_path}')
+        if self._check_for_empty_stations():
+            raise RadioConfigurationError(
+                f'No stations loaded. Unable to export configuration to: {export_path}'
+            )
             
         with open(export_path, 'w') as csv_dump:
             writer = DictWriter(
